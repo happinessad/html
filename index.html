@@ -6,19 +6,18 @@
     <title>Game Launcher</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-base: #07090e;
-            --surface: rgba(17, 22, 34, 0.72);
-            --surface-card: rgba(22, 28, 44, 0.65);
-            --border-subtle: rgba(255, 255, 255, 0.08);
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --accent-cyan: #38bdf8;
-            --accent-emerald: #34d399;
-            --accent-violet: #a78bfa;
-            --accent-rose: #fb7185;
+            --bg-deep: #060714;
+            --bg-panel: rgba(12, 15, 36, 0.78);
+            --bg-card: rgba(19, 23, 52, 0.72);
+            --bg-card-hover: rgba(28, 34, 74, 0.9);
+            --cyan: #6ae3ff;
+            --magenta: #ff61fa;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-subtle: rgba(106, 227, 255, 0.18);
         }
 
         * {
@@ -28,511 +27,579 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--bg-base);
-            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-main);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px 16px;
-            position: relative;
             overflow-x: hidden;
+            perspective: 1200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        /* Ambient background glow & subtle grid */
-        .bg-ambient {
+        /* Moving ambient background */
+        .bg-layer {
             position: fixed;
             inset: 0;
-            z-index: -1;
-            background:
-                radial-gradient(circle at 15% 20%, rgba(56, 189, 248, 0.12), transparent 45%),
-                radial-gradient(circle at 85% 80%, rgba(167, 139, 250, 0.12), transparent 45%),
-                radial-gradient(circle at 50% 50%, rgba(52, 211, 153, 0.05), transparent 60%);
-            pointer-events: none;
+            z-index: -2;
+            overflow: hidden;
+            background: radial-gradient(circle at 50% 50%, #101436 0%, #060714 75%);
         }
 
         .bg-grid {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
+            position: absolute;
+            inset: -100px;
             background-image:
-                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 40px 40px;
-            mask-image: radial-gradient(ellipse at center, black 35%, transparent 80%);
-            -webkit-mask-image: radial-gradient(ellipse at center, black 35%, transparent 80%);
+                linear-gradient(rgba(106, 227, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(106, 227, 255, 0.05) 1px, transparent 1px);
+            background-size: 48px 48px;
+            animation: gridDrift 18s linear infinite;
+            mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.85) 20%, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.85) 20%, transparent 80%);
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.35;
             pointer-events: none;
         }
 
-        /* Main Launcher Shell */
-        .launcher {
+        .orb-1 {
+            width: 420px;
+            height: 420px;
+            background: var(--cyan);
+            top: -120px;
+            left: -80px;
+            animation: orbFloat1 14s ease-in-out infinite alternate;
+        }
+
+        .orb-2 {
+            width: 460px;
+            height: 460px;
+            background: var(--magenta);
+            bottom: -140px;
+            right: -100px;
+            animation: orbFloat2 17s ease-in-out infinite alternate;
+        }
+
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0px,
+                transparent 2px,
+                rgba(255, 255, 255, 0.025) 3px,
+                rgba(255, 255, 255, 0.025) 4px
+            );
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .scene {
             width: 100%;
-            max-width: 820px;
-            background: var(--surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: 24px;
-            padding: 36px;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow:
-                0 24px 60px -12px rgba(0, 0, 0, 0.65),
-                inset 0 1px 0 rgba(255, 255, 255, 0.08);
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Header */
-        .launcher-header {
+            padding: 32px 20px;
             display: flex;
-            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 780px;
+            padding: 38px 36px 36px;
+            border-radius: 22px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid var(--border-subtle);
+            box-shadow:
+                0 25px 70px rgba(0, 0, 0, 0.65),
+                0 0 50px rgba(106, 227, 255, 0.12);
+            transform-style: preserve-3d;
+            animation:
+                containerEnter 0.8s cubic-bezier(0.22, 1, 0.36, 1) both,
+                gentleFloat 6s ease-in-out infinite 0.8s;
+        }
+
+        /* Animated gradient border glow */
+        .container::before {
+            content: '';
+            position: absolute;
+            inset: -1.5px;
+            border-radius: 23px;
+            padding: 1.5px;
+            background: linear-gradient(120deg, var(--cyan), transparent 35%, transparent 65%, var(--magenta));
+            background-size: 200% 200%;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            animation: borderShift 6s ease-in-out infinite;
+        }
+
+        .header {
+            display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 16px;
             margin-bottom: 28px;
         }
 
-        .brand {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .brand-eyebrow {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--accent-cyan);
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--accent-emerald);
-            box-shadow: 0 0 10px var(--accent-emerald);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.85); }
-        }
-
         h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(1.75rem, 3vw, 2.25rem);
+            font-size: clamp(1.75rem, 3.5vw, 2.35rem);
             font-weight: 700;
             letter-spacing: -0.02em;
-            color: var(--text-primary);
+            background: linear-gradient(90deg, #ffffff 0%, var(--cyan) 55%, var(--magenta) 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textShimmer 5s linear infinite;
         }
 
-        /* Auto-launch Timer Pill */
-        .timer-pill {
+        /* Animated timer badge */
+        .timer-wrap {
             position: relative;
+            width: 48px;
+            height: 48px;
+            flex-shrink: 0;
             display: flex;
             align-items: center;
-            gap: 12px;
-            background: rgba(10, 14, 23, 0.75);
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 10px 14px;
-            overflow: hidden;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(10, 12, 30, 0.75);
+            box-shadow: 0 0 18px rgba(255, 97, 250, 0.2);
         }
 
-        .timer-text {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.82rem;
-            color: var(--text-secondary);
-        }
-
-        .timer-text strong {
-            color: var(--text-primary);
-        }
-
-        .timer-cancel {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-secondary);
-            font-family: 'Inter', sans-serif;
-            font-size: 0.75rem;
-            font-weight: 500;
-            padding: 4px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .timer-cancel:hover {
-            background: rgba(251, 113, 133, 0.15);
-            border-color: rgba(251, 113, 133, 0.4);
-            color: var(--accent-rose);
-        }
-
-        .timer-progress {
+        .timer-ring {
             position: absolute;
-            left: 0;
-            bottom: 0;
-            height: 2px;
+            inset: 0;
             width: 100%;
-            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-emerald));
-            transform-origin: left;
-            transition: width 1s linear;
+            height: 100%;
+            transform: rotate(-90deg);
         }
 
-        /* Version Grid */
+        .timer-ring-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.08);
+            stroke-width: 3;
+        }
+
+        .timer-ring-progress {
+            fill: none;
+            stroke: url(#timerGrad);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-dasharray: 125.66;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.95s linear;
+        }
+
+        #timer {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--magenta);
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 10px rgba(255, 97, 250, 0.45);
+        }
+
         .version-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
             list-style: none;
         }
 
-        @media (max-width: 640px) {
-            .launcher {
-                padding: 24px 18px;
-                border-radius: 20px;
+        .version-card {
+            position: relative;
+            border-radius: 15px;
+            background: var(--bg-card);
+            border: 1px solid rgba(106, 227, 255, 0.16);
+            overflow: hidden;
+            transition:
+                transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+                background 0.35s ease,
+                border-color 0.35s ease,
+                box-shadow 0.35s ease;
+            opacity: 0;
+            animation: cardEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .version-card:nth-child(1) { animation-delay: 0.12s; }
+        .version-card:nth-child(2) { animation-delay: 0.22s; }
+        .version-card:nth-child(3) { animation-delay: 0.32s; }
+        .version-card:nth-child(4) { animation-delay: 0.42s; }
+
+        .version-card a {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 24px;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Moving light sweep on hover */
+        .version-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -130%;
+            width: 65%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(106, 227, 255, 0.12),
+                rgba(255, 97, 250, 0.1),
+                transparent
+            );
+            transform: skewX(-25deg);
+            transition: left 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Radial glow following cursor */
+        .version-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(
+                280px circle at var(--mx, 50%) var(--my, 50%),
+                rgba(106, 227, 255, 0.14),
+                transparent 70%
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .version-card:hover {
+            transform: translateY(-6px) scale(1.015);
+            background: var(--bg-card-hover);
+            border-color: rgba(106, 227, 255, 0.5);
+            box-shadow:
+                0 16px 35px rgba(0, 0, 0, 0.45),
+                0 0 25px rgba(106, 227, 255, 0.18);
+        }
+
+        .version-card:hover::before {
+            left: 160%;
+        }
+
+        .version-card:hover::after {
+            opacity: 1;
+        }
+
+        .card-head {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            margin-bottom: 11px;
+        }
+
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(106, 227, 255, 0.1);
+            border: 1px solid rgba(106, 227, 255, 0.25);
+            color: var(--cyan);
+            flex-shrink: 0;
+            transition: transform 0.35s ease, color 0.35s ease, border-color 0.35s ease;
+        }
+
+        .version-card:hover .card-icon {
+            transform: rotate(-6deg) scale(1.1);
+            color: var(--magenta);
+            border-color: rgba(255, 97, 250, 0.45);
+        }
+
+        .version-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.01em;
+            transition: color 0.3s ease;
+        }
+
+        .version-card:hover .version-title {
+            color: var(--cyan);
+        }
+
+        .version-description {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 18px;
+            flex-grow: 1;
+        }
+
+        .version-meta {
+            display: inline-flex;
+            align-items: center;
+            align-self: flex-start;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--cyan);
+            background: rgba(106, 227, 255, 0.08);
+            border: 1px solid rgba(106, 227, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 999px;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .version-card:hover .version-meta {
+            background: rgba(106, 227, 255, 0.15);
+            border-color: rgba(106, 227, 255, 0.45);
+        }
+
+        @keyframes gridDrift {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(48px, 48px); }
+        }
+
+        @keyframes orbFloat1 {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(90px, 60px) scale(1.15); }
+        }
+
+        @keyframes orbFloat2 {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(-80px, -70px) scale(1.12); }
+        }
+
+        @keyframes borderShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes textShimmer {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+
+        @keyframes containerEnter {
+            from {
+                opacity: 0;
+                transform: translateY(24px) scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes gentleFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+
+        @keyframes cardEnter {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 560px) {
+            .container {
+                padding: 26px 20px;
             }
             .version-grid {
                 grid-template-columns: 1fr;
             }
         }
-
-        /* Card Styling */
-        .version-card {
-            --card-accent: var(--accent-cyan);
-            --mouse-x: 50%;
-            --mouse-y: 50%;
-
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            text-decoration: none;
-            color: inherit;
-            background: var(--surface-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 16px;
-            padding: 22px;
-            overflow: hidden;
-            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease, background 0.25s ease;
-        }
-
-        .version-card[data-theme="cyan"] { --card-accent: var(--accent-cyan); }
-        .version-card[data-theme="amber"] { --card-accent: #fbbf24; }
-        .version-card[data-theme="violet"] { --card-accent: var(--accent-violet); }
-        .version-card[data-theme="rose"] { --card-accent: var(--accent-rose); }
-
-        /* Cursor spotlight effect */
-        .version-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(
-                360px circle at var(--mouse-x) var(--mouse-y),
-                color-mix(in srgb, var(--card-accent) 14%, transparent),
-                transparent 60%
-            );
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-
-        .version-card:hover::before {
-            opacity: 1;
-        }
-
-        .version-card:hover {
-            transform: translateY(-3px);
-            border-color: color-mix(in srgb, var(--card-accent) 45%, transparent);
-            background: rgba(28, 35, 56, 0.85);
-            box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
-        }
-
-        .version-card:focus-visible {
-            outline: 2px solid var(--card-accent);
-            outline-offset: 2px;
-        }
-
-        .card-top {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 14px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .card-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 11px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: color-mix(in srgb, var(--card-accent) 14%, transparent);
-            border: 1px solid color-mix(in srgb, var(--card-accent) 30%, transparent);
-            color: var(--card-accent);
-            flex-shrink: 0;
-            transition: transform 0.25s ease;
-        }
-
-        .version-card:hover .card-icon {
-            transform: scale(1.06);
-        }
-
-        .card-badge {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 4px 9px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: var(--card-accent);
-        }
-
-        .card-body {
-            position: relative;
-            z-index: 1;
-            margin-bottom: 18px;
-        }
-
-        .version-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 6px;
-            letter-spacing: -0.01em;
-        }
-
-        .version-description {
-            font-size: 0.88rem;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-
-        .card-footer {
-            position: relative;
-            z-index: 1;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-top: 14px;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-            font-size: 0.8rem;
-        }
-
-        .version-meta {
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .launch-cta {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-weight: 600;
-            color: var(--card-accent);
-            opacity: 0.75;
-            transform: translateX(-4px);
-            transition: all 0.25s ease;
-        }
-
-        .version-card:hover .launch-cta {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
     </style>
 </head>
 <body>
-    <div class="bg-ambient"></div>
-    <div class="bg-grid"></div>
+    <div class="bg-layer">
+        <div class="bg-grid"></div>
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+    <div class="scanlines"></div>
 
-    <main class="launcher">
-        <header class="launcher-header">
-            <div class="brand">
-                <span class="brand-eyebrow">
-                    <span class="status-dot"></span>
-                    Client Hub Ready
-                </span>
-                <h1>Select Version</h1>
+    <div class="scene">
+        <div class="container">
+            <div class="header">
+                <h1>Select version!</h1>
+                <div class="timer-wrap">
+                    <svg class="timer-ring" viewBox="0 0 44 44">
+                        <defs>
+                            <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6ae3ff" />
+                                <stop offset="100%" stop-color="#ff61fa" />
+                            </linearGradient>
+                        </defs>
+                        <circle class="timer-ring-bg" cx="22" cy="22" r="20"></circle>
+                        <circle class="timer-ring-progress" id="timer-progress" cx="22" cy="22" r="20"></circle>
+                    </svg>
+                    <div id="timer">20</div>
+                </div>
             </div>
 
-            <div class="timer-pill" id="timer-box">
-                <span class="timer-text" id="timer-text">
-                    Auto-launch in <strong id="timer">20s</strong>
-                </span>
-                <button type="button" class="timer-cancel" id="cancel-timer">Cancel</button>
-                <div class="timer-progress" id="timer-progress"></div>
-            </div>
-        </header>
-
-        <ul class="version-grid">
-            <li>
-                <a href="https://happinessad.github.io/html/a1" class="version-card" data-theme="cyan">
-                    <div>
-                        <div class="card-top">
-                            <div class="card-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                            </div>
-                            <span class="card-badge">Default</span>
-                        </div>
-                        <div class="card-body">
+            <ul class="version-grid">
+                <li class="version-card" data-href="https://happinessad.github.io/html/a1">
+                    <a href="https://happinessad.github.io/html/a1">
+                        <div class="card-head">
+                            <span class="card-icon" aria-hidden="true">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                </svg>
+                            </span>
                             <h2 class="version-title">1.5.2-sp2.01</h2>
-                            <p class="version-description">Blazing fast performance. Experience the smoothest gameplay.</p>
                         </div>
-                    </div>
-                    <div class="card-footer">
-                        <span class="version-meta">Latest &amp; Greatest</span>
-                        <span class="launch-cta">
-                            Launch
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                        </span>
-                    </div>
-                </a>
-            </li>
+                        <p class="version-description">Blazing fast performance. Experience the smoothest gameplay.</p>
+                        <span class="version-meta">Latest &amp; Greatest (Performance)</span>
+                    </a>
+                </li>
 
-            <li>
-                <a href="https://happinessad.github.io/html/a2" class="version-card" data-theme="amber">
-                    <div>
-                        <div class="card-top">
-                            <div class="card-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            </div>
-                            <span class="card-badge">Stable</span>
-                        </div>
-                        <div class="card-body">
+                <li class="version-card" data-href="https://happinessad.github.io/html/a2">
+                    <a href="https://happinessad.github.io/html/a2">
+                        <div class="card-head">
+                            <span class="card-icon" aria-hidden="true">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </span>
                             <h2 class="version-title">22w43a</h2>
-                            <p class="version-description">Classic Eaglercraft vibes. Enjoy a stable experience with minimal bugs, a true throwback despite slightly lower FPS.</p>
                         </div>
-                    </div>
-                    <div class="card-footer">
-                        <span class="version-meta">Old School Cool</span>
-                        <span class="launch-cta">
-                            Launch
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                        </span>
-                    </div>
-                </a>
-            </li>
+                        <p class="version-description">Classic Eaglercraft vibes. Enjoy a stable experience with minimal bugs, a true throwback despite slightly lower FPS.</p>
+                        <span class="version-meta">Old School Cool (Stable)</span>
+                    </a>
+                </li>
 
-            <li>
-                <a href="https://happinessad.github.io/html/a3" class="version-card" data-theme="violet">
-                    <div>
-                        <div class="card-top">
-                            <div class="card-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                            </div>
-                            <span class="card-badge">QoL</span>
-                        </div>
-                        <div class="card-body">
+                <li class="version-card" data-href="https://happinessad.github.io/html/a3">
+                    <a href="https://happinessad.github.io/html/a3">
+                        <div class="card-head">
+                            <span class="card-icon" aria-hidden="true">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                                </svg>
+                            </span>
                             <h2 class="version-title">Precision Client</h2>
-                            <p class="version-description">Power up your game! Packed with Quality of Life improvements, custom texture packs, and more to enhance your play.</p>
                         </div>
-                    </div>
-                    <div class="card-footer">
-                        <span class="version-meta">Customizable</span>
-                        <span class="launch-cta">
-                            Launch
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                        </span>
-                    </div>
-                </a>
-            </li>
+                        <p class="version-description">Power up your game! Packed with Quality of Life improvements, custom texture packs, and more to enhance your play.</p>
+                        <span class="version-meta">Enhanced Experience (Customizable)</span>
+                    </a>
+                </li>
 
-            <li>
-                <a href="https://happinessad.github.io/html/a4" class="version-card" data-theme="rose">
-                    <div>
-                        <div class="card-top">
-                            <div class="card-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></svg>
-                            </div>
-                            <span class="card-badge">PvP</span>
-                        </div>
-                        <div class="card-body">
+                <li class="version-card" data-href="https://happinessad.github.io/html/a4">
+                    <a href="https://happinessad.github.io/html/a4">
+                        <div class="card-head">
+                            <span class="card-icon" aria-hidden="true">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline>
+                                    <line x1="13" y1="19" x2="19" y2="13"></line>
+                                    <line x1="16" y1="16" x2="20" y2="20"></line>
+                                    <line x1="19" y1="21" x2="21" y2="19"></line>
+                                </svg>
+                            </span>
                             <h2 class="version-title">Resent</h2>
-                            <p class="version-description">Dominate the arena! A heavily modded version built for PvP enthusiasts, offering a unique and intense combat experience.</p>
                         </div>
-                    </div>
-                    <div class="card-footer">
-                        <span class="version-meta">Modded Arena</span>
-                        <span class="launch-cta">
-                            Launch
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                        </span>
-                    </div>
-                </a>
-            </li>
-        </ul>
-    </main>
+                        <p class="version-description">Dominate the arena! A heavily modded version built for PvP enthusiasts, offering a unique and intense combat experience.</p>
+                        <span class="version-meta">PvP Powerhouse (Modded)</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
 
     <script>
-        // Card spotlight cursor tracking
-        const cards = document.querySelectorAll('.version-card');
-        cards.forEach(card => {
+        // Smooth interpolated camera tilt
+        const scene = document.querySelector('.scene');
+        let targetX = 0;
+        let targetY = 0;
+        let currentX = 0;
+        let currentY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            targetX = ((e.clientX / window.innerWidth) - 0.5) * 10;
+            targetY = ((e.clientY / window.innerHeight) - 0.5) * 10;
+        });
+
+        document.addEventListener('mouseleave', () => {
+            targetX = 0;
+            targetY = 0;
+        });
+
+        function animateTilt() {
+            currentX += (targetX - currentX) * 0.08;
+            currentY += (targetY - currentY) * 0.08;
+
+            scene.style.transform = `
+                rotateX(${-currentY}deg)
+                rotateY(${currentX}deg)
+                translateZ(20px)
+            `;
+            requestAnimationFrame(animateTilt);
+        }
+        animateTilt();
+
+        // Card cursor spotlight effect
+        const versionCards = document.querySelectorAll('.version-card');
+        versionCards.forEach(card => {
             card.addEventListener('mousemove', (e) => {
                 const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.setProperty('--mouse-x', `${x}px`);
-                card.style.setProperty('--mouse-y', `${y}px`);
+                card.style.setProperty('--mx', `${e.clientX - rect.left}px`);
+                card.style.setProperty('--my', `${e.clientY - rect.top}px`);
             });
         });
 
-        // Countdown & auto-redirect logic
-        const TOTAL_TIME = 20;
-        let timeLeft = TOTAL_TIME;
+        // Timer logic with progress ring
+        const totalTime = 20;
+        let timeLeft = totalTime;
         const timerDisplay = document.getElementById('timer');
-        const timerText = document.getElementById('timer-text');
         const timerProgress = document.getElementById('timer-progress');
-        const cancelBtn = document.getElementById('cancel-timer');
+        const circumference = 2 * Math.PI * 20;
         let countdownInterval;
 
-        function stopTimer(showCancelled = false) {
-            clearInterval(countdownInterval);
-            if (showCancelled) {
-                timerText.textContent = 'Auto-launch paused';
-                timerProgress.style.width = '0%';
-                cancelBtn.style.display = 'none';
-            }
-        }
-
-        function tick() {
-            timeLeft--;
-            timerDisplay.textContent = `${Math.max(timeLeft, 0)}s`;
-            timerProgress.style.width = `${(Math.max(timeLeft, 0) / TOTAL_TIME) * 100}%`;
+        function updateTimer() {
+            timerDisplay.textContent = timeLeft;
+            const offset = circumference * (1 - timeLeft / totalTime);
+            timerProgress.style.strokeDashoffset = offset;
 
             if (timeLeft <= 0) {
-                stopTimer();
+                clearInterval(countdownInterval);
                 window.location.href = 'https://happinessad.github.io/html/a1';
             }
+            timeLeft--;
         }
 
-        cancelBtn.addEventListener('click', () => stopTimer(true));
-        cards.forEach(card => card.addEventListener('click', () => stopTimer(false)));
+        function startTimer() {
+            countdownInterval = setInterval(updateTimer, 1000);
+        }
 
-        countdownInterval = setInterval(tick, 1000);
+        function stopTimer() {
+            clearInterval(countdownInterval);
+        }
+
+        versionCards.forEach(card => {
+            card.addEventListener('click', () => {
+                stopTimer();
+            });
+        });
+
+        startTimer();
     </script>
 </body>
 </html>
